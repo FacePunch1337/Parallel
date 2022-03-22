@@ -3,83 +3,60 @@ using System.Threading;
 
 namespace ParaLLeL
 {
-    internal class Program
-    {
-
-        static void Main(string[] args)
-        {
-            Thread t;
-            CancellationTokenSource cts;
-
-
-            cts = new CancellationTokenSource();
-
-            for (int i = 0; i < 10; i++)
-                {
-                    t = new Thread(ThreadProc);
-                    t.Start(new Multidata { time = DateTime.Now, ms = DateTime.Now.Millisecond, token = cts.Token });
-                    t.Join();
-                    Thread.Sleep(1000);
-
-                    if (Multidata.id == 3)
-                    {
-                         cts.Cancel();
-                    }
-
-                }
-
-        }
-
-        
-
-
-        private static void ThreadProc(object par)
-        {
-            if (par == null) return;
-            Multidata token = (Multidata)par;
-            Console.WriteLine("ThreadProc" + par);
-            for (int i = 0; i < 100; i++)
-            {
-                
-                if (token.token.IsCancellationRequested)
-                {
-                    Console.WriteLine("ThreadProc Cancelled");
-                    return;
-                }
-                
-
-                if (!token.token.IsCancellationRequested)
-                {
-                    Console.WriteLine("ThreadProc Stop" + par);
-                    return;
-                }
-
-                
-
-            }
-            
-        }
-    }
-
     class Multidata
     {
-        public static String name { get; set ; }
-
+        private static readonly object numLocker = new object();
+        public static String name { get; set; }
         public static int id { get; set; }
         public DateTime time { get; set; }
         public int ms { get; set; }
 
-        
+        public CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken token { get; set; }
+        
 
         public Multidata()
         {
             name = "Thread";
-            id += Thread.CurrentThread.ManagedThreadId;
+        }
+
+        public void ThreadPoolCallback(object threadContext)
+        {
+            int copyId;
+
+            lock (numLocker)
+            {
+                copyId = Multidata.id++;
+            }
+
+            Console.WriteLine($"ID: {copyId} - Start | {ToString()} ");
+            Thread.Sleep(1000);
+            Console.WriteLine($"ID: {copyId} - Finish | {ToString()} ");
         }
         public override string ToString()
         {
-            return $"\tName: {name} | ID: {id} | DateTime: {time} : {ms} |'\t' {token}";
+            return $"\tName: {name} | DateTime: {time = DateTime.Now} : {ms = DateTime.Now.Millisecond} |'\t' {cts.Token}";
         }
     }
+
+    internal class Program
+    {
+
+     
+        static void Main(string[] args)
+        {
+            
+            Multidata.id = 0;
+            var multidata = new Multidata();
+            for (int i = 0; i < 10; i++)
+            {
+                ThreadPool.QueueUserWorkItem(multidata.ThreadPoolCallback, i);
+            }
+            Thread.Sleep(3000);
+        }
+
+       
+    }
+
+   
 }
