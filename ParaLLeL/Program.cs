@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Threading;
+using System.Timers;
+using System.Threading.Tasks;
 
 namespace ParaLLeL
 {
+
+    
     class Multidata
     {
         private static readonly object numLocker = new object();
@@ -13,12 +17,54 @@ namespace ParaLLeL
 
         public CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken token { get; set; }
-        
+
+        public static Task task = null;
+
+        public static int value;
 
         public Multidata()
         {
-            name = "Thread";
+            
         }
+
+        public Multidata(int _value)
+        {
+            value = _value * _value;
+        }
+
+        
+
+        public void StartTasks(object task_object)
+        {
+            for (int i = 0; i < value; ++i)
+            {
+                var task = new Task(TaskProc, i);
+                task.Start();
+                task.Wait();
+                ShowNumber(task_object);
+            }
+            Console.WriteLine($"\nTOTAL_TASKS[{value}]");
+
+        }
+
+
+
+        public static void TaskProc(object par)
+        {
+            Console.WriteLine("TaskProc ID: " + par);
+        }
+
+        public static void ShowNumber(object par)
+        {
+            int copyId;
+
+            lock (numLocker)
+            {
+                copyId = ++id;
+            }
+            Console.WriteLine($"Number: {copyId}");
+        }
+
 
         public void ThreadPoolCallback(object threadContext)
         {
@@ -42,8 +88,33 @@ namespace ParaLLeL
     internal class Program
     {
 
-     
         static void Main(string[] args)
+        {
+            var multidata = new Multidata(3);
+            multidata.StartTasks(multidata);
+  
+        }
+
+
+       // #region ThreadPool
+       /* static void Main1(string[] args)
+        {
+            var multidata = new Multidata();
+            Task task = new Task(Multidata.TaskProc2, multidata.cts);
+            
+            multidata.Tasks(multidata);
+            
+
+            Task.Run(Multidata.TaskProc1).Wait();
+           
+            Multidata.task = Task.Run(() => Multidata.TaskProc2("Hello"));
+            task.Wait();
+
+        }
+        #endregion
+
+        #region ThreadPool
+        static void Main0(string[] args)
         {
             
             Multidata.id = 0;
@@ -54,9 +125,13 @@ namespace ParaLLeL
             }
             Thread.Sleep(3000);
         }
+        #endregion */
 
-       
+      
+
+
+
     }
 
-   
+
 }
